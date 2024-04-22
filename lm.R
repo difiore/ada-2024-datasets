@@ -1,6 +1,7 @@
 library(shiny)
 library(DT)
 library(tidyverse)
+library(broom)
 f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/zombies.csv"
 d <- read_csv(f, col_names = TRUE)
 d <- select(d, height, weight, age, gender, major)
@@ -12,12 +13,11 @@ p <- names(d)
 ui <- fluidPage(
   titlePanel(h1("Simple LM Visualizer")),
   sidebarLayout(
-    sidebarPanel(
+    sidebarPanel(width = 5,
       selectInput(
         "response",
         label = "Choose a response variable...",
         choices = c("", r)
-        # NOTE: the "" is needed to allow NO VARIABLE to be the default value
       ),
       br(),
       selectInput(
@@ -32,7 +32,7 @@ ui <- fluidPage(
       tableOutput("modelresults"),
       style="text-align:center"
     ),
-    mainPanel(
+    mainPanel(width = 7,
       dataTableOutput("datatable"),
       plotOutput("plot")
     )
@@ -69,9 +69,7 @@ server <- function(input, output) {
   output$modelresults <- renderTable({
     if (!is.null(m())) {
       res <- lm(data = d, formula = m())
-      res <- as.data.frame(coefficients(res))
-      names(res) <- "Beta"
-      res
+      tidy(res) |> select(term, estimate, p.value)
     }
   }, width = "100%", rownames = TRUE, striped = TRUE, spacing = "s", bordered =
     TRUE, align = "c", digits = 3)
@@ -81,12 +79,13 @@ server <- function(input, output) {
       y <- input$response
       x <- input$predictors
       if (class(d[[x]]) != "factor") {
-        p <- ggplot(data = d, aes(x = d[[x]], y = d[[y]])) +
+        p <- ggplot(data = d, aes(x = .data[[x]], y = .data[[y]])) +
           geom_point() +
           geom_smooth(method = lm)
       } else {
-        p <- ggplot(data = d, aes(x = d[[x]], y = d[[y]])) +
-          geom_boxplot()
+        p <- ggplot(data = d, aes(x = .data[[x]], y = .data[[y]])) +
+          geom_violin() +
+          geom_jitter(width = 0.2, alpha = 0.5)
       }
       p <- p + xlab(x) + ylab(y) +
         theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
@@ -95,18 +94,19 @@ server <- function(input, output) {
       y <- input$response
       x <- input$predictors
       if (class(d[[x[1]]]) == "factor" & class(d[[x[2]]]) == "factor") {
-        p <- ggplot(data = d, aes(x = d[[x[1]]], y = d[[y]])) +
-          geom_boxplot() +
+        p <- ggplot(data = d, aes(x = .data[[x[1]]], y = .data[[y]])) +
+          geom_violin() +
+          geom_jitter(width = 0.2, alpha = 0.5) +
           facet_wrap(~ d[[x[2]]])
         p <- p + xlab(x[1]) + ylab(y)
       } else if (class(d[[x[1]]]) != "factor" & class(d[[x[2]]]) == "factor"){
-        p <- ggplot(data = d, aes(x = d[[x[1]]], y = d[[y]])) +
+        p <- ggplot(data = d, aes(x = .data[[x[1]]], y = .data[[y]])) +
           geom_point() +
           geom_smooth(method = lm) +
           facet_wrap(~ d[[x[2]]])
         p <- p + xlab(x[1]) + ylab(y)
       } else if (class(d[[x[1]]]) == "factor" & class(d[[x[2]]]) != "factor"){
-        p <- ggplot(data = d, aes(x = d[[x[2]]], y = d[[y]])) +
+        p <- ggplot(data = d, aes(x = .data[[x[2]]], y = .data[[y]])) +
           geom_point() +
           geom_smooth(method = lm) +
           facet_wrap(~ d[[x[1]]])
