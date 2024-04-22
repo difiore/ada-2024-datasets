@@ -1,7 +1,7 @@
 library(shiny)
 library(DT)
 library(tidyverse)
-f <- "https://raw.githubusercontent.com/difiore/ADA-datasets/master/zombies.csv"
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/zombies.csv"
 d <- read_csv(f, col_names = TRUE)
 d <- select(d, height, weight, age, gender, major)
 d$gender <- factor(d$gender)
